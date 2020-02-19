@@ -11,7 +11,7 @@
 
 bool g_enable_gpu = false;
 // 检测过滤阈值
-float g_threshold = 0.7;
+float g_threshold = 0.1;
 
 // 用于记录检测结果
 class DetectionOut {
@@ -72,7 +72,7 @@ bool preprocess_image(cv::Mat& im, float* buffer, const std::vector<int>& input_
 
 // 图片预处理：输入为图片路径
 bool preprocess_image(std::string filename, float* buffer, const std::vector<int>& input_shape) {
-        cv::Mat im = cv::imread(filename);
+        cv::Mat im = cv::imread(filename, cv::IMREAD_COLOR);
         if (im.data == nullptr || im.empty()) {
             printf("Fail to open image file : [%s]\n", filename.c_str());
             return false;
@@ -130,7 +130,7 @@ void get_image_shape(
         std::vector<std::vector<int>>& input_shapes)
 {
     for (int i = 0; i < images.size(); ++i) {
-        auto im = cv::imread(images[i]);
+        auto im = cv::imread(images[i], cv::IMREAD_COLOR);
         if (im.data == nullptr || im.empty()) {
             printf("Fail to open image[%d]: [%s]\n", i, images[i].c_str());
             continue;
@@ -204,7 +204,8 @@ bool preprocess_batch_detection(
             const std::vector<float>& input_data,
             const std::vector<int>& input_shape,
             std::vector<float>& output_data,
-            int output_id=0) {
+            int output_id = 0,
+            std::vector<std::vector<size_t>>* lod_data = nullptr) {
     // 设置模型配置
     paddle::AnalysisConfig config;
     config.SetModel(model_dir + "/__model__",
@@ -240,6 +241,9 @@ bool preprocess_batch_detection(
     }
     output_data.resize(output_size);
     out_tensor->copy_to_cpu(output_data.data());
+    if (lod_data != nullptr) {
+        *lod_data = out_tensor->lod();
+    }
 }
 
 // 是否带口罩分类模型后处理, 保存分类结果为: (类型, 分数) 对
@@ -273,26 +277,32 @@ std::vector<std::pair<int, float>> postprocess_classify(
 // 人脸检测模型的后处理
 std::vector<DetectionOut> postprocess_detection(
         std::vector<float>& output_data, 
-        const std::vector<size_t>& lod_vector) {
-    std::vector<int> resize_widths;
-    std::vector<int> resize_heights;
+        std::vector<std::vector<size_t>>& lod_data,
+        std::vector<int>& input_shape) {
     std::vector<DetectionOut> result;
-    for (int i = 0; i < lod_vector.size() - 1; ++i) {
+    auto rh = input_shape[2];
+    auto rw = input_shape[3];
+    printf("x = %d\n", lod_data[0].size());
+    for (int i = 0; i < lod_data[0].size() - 1; ++i) {
         result.emplace_back(DetectionOut(i));
-        for (int j = lod_vector[i]; j < lod_vector[i+1]; ++j) {
+        for (int j = lod_data[0][i]; j < lod_data[0][i+1]; ++j) {
             // 分类
             int class_id = static_cast<int>(round(output_data[0 + j * 6]));
             // 分数
             float score = output_data[1 + j * 6];
             // 左上坐标
-            int top_left_x = output_data[2 + j * 6] * resize_widths[i];
-            int top_left_y = output_data[3 + j * 6] * resize_heights[i];
+            int top_left_x = output_data[2 + j * 6] * rw;
+            int top_left_y = output_data[3 + j * 6] * rh;
             // 右下坐标
-            int right_bottom_x = output_data[4 + j * 6] * resize_widths[i];
-            int right_bottom_y = output_data[5 + j * 6] * resize_heights[i];
+            int right_bottom_x = output_data[4 + j * 6] * rw;
+            int right_bottom_y = output_data[5 + j * 6] * rh;
             if (score > g_threshold) {
                 std::vector<int> rect = {top_left_x, top_left_y, right_bottom_x, right_bottom_y};
                 result[i].add_rect(rect);
+                printf("image[%d]: rect[%d] = [(%d, %d), (%d, %d)]\n",
+                    i, result.size() - 1,
+                    top_left_x, top_left_y, right_bottom_x, right_bottom_y
+                );
             }
         }
     }
@@ -309,11 +319,15 @@ void predict(std::vector<std::string>& images, std::string model_dir)
     int batch_size = images.size();
     std::vector<float> input_data;
     std::vector<float> output_data;
+    std::vector<std::vector<size_t>> lod_data;
     std::vector<int> input_shape;
     // 检测数据的预处理
     preprocess_batch_detection(images, input_data, input_shape);
     // 检测模型预测
-    run_predict(detect_model_dir, input_data, input_shape, output_data);
+    run_predict(detect_model_dir, input_data, input_shape, output_data, 0, &lod_data);
+    // 检测模型的后处理
+    postprocess_detection(output_data, lod_data, input_shape);
+    /*
     input_data.clear();
     output_data.clear();
     input_shape = {batch_size, 3, 128, 128};
@@ -324,6 +338,7 @@ void predict(std::vector<std::string>& images, std::string model_dir)
     run_predict(classify_model_dir, input_data, input_shape, output_data, 1);
     // 分类后处理
     auto out = postprocess_classify(output_data, batch_size);
+    */
 }
 
 int main(int argc, char** argv)
