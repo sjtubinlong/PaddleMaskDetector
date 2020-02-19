@@ -45,11 +45,12 @@ public:
 };
 
 // 图片预处理: 输入直接为cv::Mat
-bool preprocess_image(cv::Mat im, float* buffer, const std::vector<int>& input_shape) {
-    if (im.data == nullptr || im.empty()) {
+bool preprocess_image(const cv::Mat& im_in, float* buffer, const std::vector<int>& input_shape) {
+    if (im_in.data == nullptr || im_in.empty()) {
         printf("Invalid Mat input\n");
         return false;
     }
+    cv::Mat im(im_in);
     // resize
     int rc = im.channels();
 	int rw = im.cols;
@@ -136,7 +137,7 @@ void get_image_data(
         }
         cv::cvtColor(im, im, cv::COLOR_RGB2BGR);
         input_shapes[i] = {1, im.channels(), im.rows, im.cols};
-        mats[i] = im.clone();
+        mats[i] = im;
     }
 }
 
@@ -165,7 +166,7 @@ bool preprocess_batch_detection(
         auto im = input_mat[i];
         auto buffer = data[i].data();
         auto shape = shapes[i];
-        threads.emplace_back([im, buffer, &shape] {
+        threads.emplace_back([im, buffer, shape] {
             preprocess_image(im, buffer, shape);
         });
     }
@@ -339,35 +340,37 @@ void predict(std::vector<std::string>& images, std::string model_dir)
     // 检测模型的后处理
     auto det_out = postprocess_detection(output_data, lod_data, input_shape, input_mat);
     
-    printf("det ready!!!\n");
-    // 获取检测框 mat 列表
-    std::vector<cv::Mat> det_mats = det_out[0].get_mats();
-    int cls_batch_size = det_mats.size();
-    std::vector<float> cls_input_data;
-    std::vector<float> cls_output_data;
-    std::vector<int> cls_input_shape = {cls_batch_size, 3, 128, 128};
-    // 分类预处理
-    preprocess_batch_classify(det_mats, cls_input_data, cls_input_shape);
-    // 分类预测
-    run_predict(classify_model_dir, cls_input_data, cls_input_shape, cls_output_data, 1);
-    // 分类后处理
-    auto out = postprocess_classify(cls_output_data, cls_batch_size);
-    for (int i = 0; i < cls_batch_size; ++i) {
-        auto rect = det_out[0].get_rects()[i];
-        auto cls = out[i];
-        printf("image[%d].rect[%d] = (%d, %d, %d, %d), label_class=%d, confidence=%.3f\n",
-            0, i, rect[0], rect[1], rect[2], rect[3], cls.first, cls.second
-        );
+    for (int i = 0; i < det_out.size(); ++i) {
+        // 获取检测框 mat 列表
+        std::vector<cv::Mat> det_mats = det_out[i].get_mats();
+        int cls_batch_size = det_mats.size();
+        std::vector<float> cls_input_data;
+        std::vector<float> cls_output_data;
+        std::vector<int> cls_input_shape = {cls_batch_size, 3, 128, 128};
+        // 分类预处理
+        preprocess_batch_classify(det_mats, cls_input_data, cls_input_shape);
+        // 分类预测
+        run_predict(classify_model_dir, cls_input_data, cls_input_shape, cls_output_data, 1);
+        // 分类后处理
+        auto out = postprocess_classify(cls_output_data, cls_batch_size);
+        for (int j = 0; j < cls_batch_size; ++j) {
+            auto rect = det_out[i].get_rects()[j];
+            auto cls = out[j];
+            printf("image[%d].rect[%d] = (%d, %d, %d, %d), label_class=%d, confidence=%.3f\n",
+                i, j, rect[0], rect[1], rect[2], rect[3], cls.first, cls.second
+            );
+        }
     }
 }
 
 int main(int argc, char** argv)
 {
-    std::string model_dir = "/root/projects/PaddleMask/models/";
-    std::vector<std::string> images = {
-        //"/root/projects/PaddleMask/cpp-det/build/images/mask0/mask_input.png"
-        "/root/projects/PaddleMask/cpp-det/build/images/mask1/mask0.jpeg"
-    };
+    if (argc != 3) {
+        printf("Usage: ./main /path/of/model/dir/ /path/of/input/image\n");
+        return -1;
+    }
+    std::string model_dir = argv[1];
+    std::vector<std::string> images = {argv[2]};
     predict(images, model_dir);
     return 0;
 }
