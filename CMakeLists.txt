@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(PaddleCVInference CXX C)
+project(PaddleMaskDetector CXX C)
 
 option(WITH_MKL        "Compile demo with MKL/OpenBlas support,defaultuseMKL."          ON)
 option(WITH_GPU        "Compile demo with GPU/CPU, default use CPU."                    ON)
@@ -9,6 +9,7 @@ option(USE_TENSORRT "Compile demo with TensorRT."   OFF)
 SET(PADDLE_DIR "" CACHE PATH "Location of libraries")
 SET(OPENCV_DIR "" CACHE PATH "Location of libraries")
 SET(CUDA_LIB "" CACHE PATH "Location of libraries")
+SET(CUDNN_LIB "" CACHE PATH "Location of libraries")
 
 macro(safe_set_static_flag)
     foreach(flag_var
