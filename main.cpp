@@ -11,7 +11,7 @@
 
 bool g_enable_gpu = false;
 // 检测过滤阈值
-float g_threshold = 0.1;
+float g_threshold = 0.2;
 
 // 用于记录检测结果
 class DetectionOut {
@@ -25,6 +25,10 @@ public:
     // 构造函数
     DetectionOut(int idx) : image_id(idx) {        
     }
+    // 获取检测库数量
+    int get_rect_num() const {
+        return rectange.size();
+    }
     // 添加一个检测框结果
     void add_rect(std::vector<int>& rect) {
         rectange.emplace_back(rect);
@@ -37,17 +41,16 @@ bool preprocess_image(cv::Mat& im, float* buffer, const std::vector<int>& input_
         printf("Invalid Mat input\n");
         return false;
     }
-    im.convertTo(im, CV_32FC3, 1 / 255.0);
     // resize
     int channels = im.channels();
 	int rw = im.cols;
     int rh = im.rows;
     cv::Size resize_size(input_shape[2], input_shape[3]);
     if (rw != input_shape[2] || rh != input_shape[3]) {
-        cv::resize(im, im, resize_size);
+        cv::resize(im, im, resize_size, cv::INTER_AREA);
     }
     // BGR2RGB
-    cvtColor(im, im, CV_BGR2RGB);
+    //cvtColor(im, im, CV_BGR2RGB);
     // 减均值除方差: (img - mean) * scale
     int hh = im.rows;
     int ww = im.cols;
@@ -77,7 +80,6 @@ bool preprocess_image(std::string filename, float* buffer, const std::vector<int
             printf("Fail to open image file : [%s]\n", filename.c_str());
             return false;
         }
-        im.convertTo(im, CV_32FC3, 1 / 255.0);
         return preprocess_image(im, buffer, input_shape);
 }
 
@@ -299,9 +301,10 @@ std::vector<DetectionOut> postprocess_detection(
             if (score > g_threshold) {
                 std::vector<int> rect = {top_left_x, top_left_y, right_bottom_x, right_bottom_y};
                 result[i].add_rect(rect);
-                printf("image[%d]: rect[%d] = [(%d, %d), (%d, %d)]\n",
-                    i, result.size() - 1,
-                    top_left_x, top_left_y, right_bottom_x, right_bottom_y
+                printf("image[%d]: rect[%d] = [(%d, %d), (%d, %d)], score = %.5f\n",
+                    i, result[i].get_rect_num() - 1,
+                    top_left_x, top_left_y, right_bottom_x, right_bottom_y,
+                    score
                 );
             }
         }
