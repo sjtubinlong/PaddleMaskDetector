@@ -29,9 +29,18 @@ public:
     int get_rect_num() const {
         return rectange.size();
     }
+    // 获取cv::Mat列表
+    std::vector<cv::Mat> get_mats() {
+        return mats;
+    }
+    // 获取检测库列表
+    const std::vector<std::vector<int>>& get_rects() const {
+        return rectange;
+    }
     // 添加一个检测框结果
-    void add_rect(std::vector<int>& rect) {
+    void add_rect(std::vector<int>& rect, cv::Mat im) {
         rectange.emplace_back(rect);
+        mats.push_back(im);
     }
 };
 
@@ -45,17 +54,19 @@ bool preprocess_image(cv::Mat im, float* buffer, const std::vector<int>& input_s
     int rc = im.channels();
 	int rw = im.cols;
     int rh = im.rows;
-    cv::cvtColor(im, im, cv::COLOR_RGB2BGR);
     cv::Size resize_size(input_shape[3], input_shape[2]);
     if (rw != input_shape[3] || rh != input_shape[2]) {
         cv::resize(im, im, resize_size);
     }
+    rc = im.channels();
+	rw = im.cols;
+    rh = im.rows;
     // 减均值除方差: (img - mean) * scale
     float mean[3] = {104, 117, 123};
     float scale[3] = {0.007843, 0.007843, 0.007843};
     //#pragma omp parallel for
     for (int h = 0; h < rh; ++h) {
-        const uchar* uptr = im.ptr<uchar>(h);
+        auto uptr = im.ptr<uchar>(h);
         int im_index = 0;
         for (int w = 0; w < rw; ++w) {
             for (int c = 0; c < rc; ++c) {
@@ -71,12 +82,13 @@ bool preprocess_image(cv::Mat im, float* buffer, const std::vector<int>& input_s
 
 // 图片预处理：输入为图片路径
 bool preprocess_image(std::string filename, float* buffer, const std::vector<int>& input_shape) {
-        cv::Mat im = cv::imread(filename, cv::IMREAD_COLOR);
+        cv::Mat im = cv::imread(filename);
         if (im.data == nullptr || im.empty()) {
             printf("Fail to open image file : [%s]\n", filename.c_str());
             return false;
         }
         im.convertTo(im, CV_32FC3, 1 / 255.0);
+        cv::cvtColor(im, im, cv::COLOR_BGR2RGB);
         return preprocess_image(im, buffer, input_shape);
 }
 
@@ -93,7 +105,7 @@ bool preprocess_batch_classify(
     // 多线程并行预处理处理数据
     std::vector<std::thread> threads;
     for (int i = 0; i < images.size(); ++i) {
-        cv::Mat im = images[i];
+        T im = images[i];
         float* base = input_data.data();
         float* buffer = reinterpret_cast<float*>(base + i * item_size);
         threads.emplace_back([im, buffer, input_shape] {
@@ -117,13 +129,14 @@ void get_image_data(
 {
     for (int i = 0; i < images.size(); ++i) {
         //cv::IMREAD_COLOR
-        auto im = cv::imread(images[i], -1);
+        auto im = cv::imread(images[i], cv::IMREAD_COLOR);
         if (im.data == nullptr || im.empty()) {
             printf("Fail to open image[%d]: [%s]\n", i, images[i].c_str());
             continue;
         }
+        cv::cvtColor(im, im, cv::COLOR_RGB2BGR);
         input_shapes[i] = {1, im.channels(), im.rows, im.cols};
-        mats[i] = im;
+        mats[i] = im.clone();
     }
 }
 
@@ -131,7 +144,8 @@ void get_image_data(
 bool preprocess_batch_detection(
         std::vector<std::string>& images,
         std::vector<float>& input_data,
-        std::vector<int>& input_shape) {
+        std::vector<int>& input_shape,
+        std::vector<cv::Mat>& input_mat) {
     // batch 大小
     int batch_size = images.size();
     // 用于临时每张图片预处理后的数据
@@ -139,8 +153,8 @@ bool preprocess_batch_detection(
     // 所有图片的尺寸
     std::vector<std::vector<int>> shapes(batch_size);
     // 所有图片读入到cv::Mat
-    std::vector<cv::Mat> mats(batch_size);
-    get_image_data(images, mats, shapes);
+    input_mat.resize(batch_size);
+    get_image_data(images, input_mat, shapes);
     for (int i = 0; i < batch_size; ++i) {
         int item_size = shapes[i][1] * shapes[i][2] * shapes[i][3];
         data[i].resize(item_size);
@@ -148,7 +162,7 @@ bool preprocess_batch_detection(
     // 多线程并行预处理处理数据
     std::vector<std::thread> threads;
     for (int i = 0; i < batch_size; ++i) {
-        auto im = mats[i];
+        auto im = input_mat[i];
         auto buffer = data[i].data();
         auto shape = shapes[i];
         threads.emplace_back([im, buffer, &shape] {
@@ -160,7 +174,6 @@ bool preprocess_batch_detection(
             t.join();
         }
     }
-
     // 找到所有图片的最大宽到高, 然后一一进行 padding
     int max_h = -1;
     int max_w = -1;
@@ -252,13 +265,13 @@ std::vector<std::pair<int, float>> postprocess_classify(
 	    for (int j = 0; j < (out_num / batch_size); ++j) {
             auto infer_class = j;
             auto score = *(j + out_addr);
-            printf("image[%d]: class=%d, score=%.5f\n", i, infer_class, score);
+            // printf("image[%d]: class=%d, score=%.5f\n", i, infer_class, score);
 	        if(score > best_class_score) {
 		        best_class_id = infer_class;
                 best_class_score = score;
 	        }
 	    }
-        printf("image[%d] : best_class_id=%d, score=%.5f\n", i, best_class_id, best_class_score);
+        // printf("image[%d] : best_class_id=%d, score=%.5f\n", i, best_class_id, best_class_score);
         result.push_back({best_class_id, best_class_score});
     }
     return result;
@@ -268,7 +281,8 @@ std::vector<std::pair<int, float>> postprocess_classify(
 std::vector<DetectionOut> postprocess_detection(
         std::vector<float>& output_data, 
         std::vector<std::vector<size_t>>& lod_data,
-        std::vector<int>& input_shape) {
+        std::vector<int>& input_shape,
+        std::vector<cv::Mat>& input_mat) {
     std::vector<DetectionOut> result;
     auto rh = input_shape[2];
     auto rw = input_shape[3];
@@ -285,14 +299,20 @@ std::vector<DetectionOut> postprocess_detection(
             // 右下坐标
             int right_bottom_x = output_data[4 + j * 6] * rw;
             int right_bottom_y = output_data[5 + j * 6] * rh;
+            int wd = right_bottom_x - top_left_x;
+            int hd = right_bottom_y - top_left_y;
             if (score > g_threshold) {
                 std::vector<int> rect = {top_left_x, top_left_y, right_bottom_x, right_bottom_y};
-                result[i].add_rect(rect);
+                cv::Rect clip_rect = cv::Rect(top_left_x, top_left_y, wd, hd) & cv::Rect(0, 0, rw, rh);;
+                cv::Mat roi = input_mat[i](clip_rect);
+                result[i].add_rect(rect, roi);
+                /*
                 printf("image[%d]: rect[%d] = [(%d, %d), (%d, %d)], score = %.5f\n",
                     i, result[i].get_rect_num() - 1,
                     top_left_x, top_left_y, right_bottom_x, right_bottom_y,
                     score
                 );
+                */
             }
         }
     }
@@ -311,35 +331,42 @@ void predict(std::vector<std::string>& images, std::string model_dir)
     std::vector<float> output_data;
     std::vector<std::vector<size_t>> lod_data;
     std::vector<int> input_shape;
-    
+    std::vector<cv::Mat> input_mat;
     // 检测数据的预处理
-    preprocess_batch_detection(images, input_data, input_shape);
+    preprocess_batch_detection(images, input_data, input_shape, input_mat);
     // 检测模型预测
     run_predict(detect_model_dir, input_data, input_shape, output_data, 0, &lod_data);
     // 检测模型的后处理
-    postprocess_detection(output_data, lod_data, input_shape);
-    /*
-    int cls_batch_size = images.size();
+    auto det_out = postprocess_detection(output_data, lod_data, input_shape, input_mat);
+    
+    printf("det ready!!!\n");
+    // 获取检测框 mat 列表
+    std::vector<cv::Mat> det_mats = det_out[0].get_mats();
+    int cls_batch_size = det_mats.size();
     std::vector<float> cls_input_data;
     std::vector<float> cls_output_data;
-    std::vector<int> cls_input_shape = {batch_size, 3, 128, 128};
-    // 分类模型开始预测
+    std::vector<int> cls_input_shape = {cls_batch_size, 3, 128, 128};
     // 分类预处理
-    preprocess_batch_classify(images, cls_input_data, cls_input_shape);
+    preprocess_batch_classify(det_mats, cls_input_data, cls_input_shape);
     // 分类预测
     run_predict(classify_model_dir, cls_input_data, cls_input_shape, cls_output_data, 1);
     // 分类后处理
-    auto out = postprocess_classify(cls_output_data, batch_size);
-    */
-    
+    auto out = postprocess_classify(cls_output_data, cls_batch_size);
+    for (int i = 0; i < cls_batch_size; ++i) {
+        auto rect = det_out[0].get_rects()[i];
+        auto cls = out[i];
+        printf("image[%d].rect[%d] = (%d, %d, %d, %d), label_class=%d, confidence=%.3f\n",
+            0, i, rect[0], rect[1], rect[2], rect[3], cls.first, cls.second
+        );
+    }
 }
 
 int main(int argc, char** argv)
 {
     std::string model_dir = "/root/projects/PaddleMask/models/";
     std::vector<std::string> images = {
-    	"/root/projects/PaddleMask/cpp-det/build/images/mask1/mask0.jpeg",
-        "/root/projects/PaddleMask/cpp-det/build/images/mask0/mask_input.png"
+        //"/root/projects/PaddleMask/cpp-det/build/images/mask0/mask_input.png"
+        "/root/projects/PaddleMask/cpp-det/build/images/mask1/mask0.jpeg"
     };
     predict(images, model_dir);
     return 0;
