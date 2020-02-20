@@ -141,7 +141,7 @@ else()
 endif()
 
 if (NOT WIN32)
-    set(EXTERNAL_LIB "-lrt -ldl -lpthread")
+    set(EXTERNAL_LIB "-lrt  -lpthread -ldl")
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
         glog gflags protobuf z xxhash
@@ -155,7 +155,7 @@ if (NOT WIN32)
 else()
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
-        opencv_world346 glog libyaml-cppmt gflags_static libprotobuf zlibstatic xxhash ${EXTERNAL_LIB})
+        opencv_world346 glog libyaml-cppmt gflags_static libprotobuf zlibstatic xxhash)
     set(DEPS ${DEPS} libcmt shlwapi)
     if (EXISTS "${PADDLE_DIR}/third_party/install/snappy/lib")
         set(DEPS ${DEPS} snappy)
@@ -206,8 +206,9 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${OPENCV_3RD_LIB_DIR}/liblibjpeg-turbo${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(DEPS ${DEPS} ${OPENCV_3RD_LIB_DIR}/liblibwebp${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(DEPS ${DEPS} ${OPENCV_3RD_LIB_DIR}/libzlib${CMAKE_STATIC_LIBRARY_SUFFIX})
+     
 endif()
-
+set(DEPS ${DEPS} ${EXTERNAL_LIB})
 add_executable(main main.cpp)
 
 target_link_libraries(main ${DEPS})
