@@ -209,7 +209,7 @@ bool preprocess_batch_detection(std::vector<std::string>& images,
 }
 
 // 对图片进行预测
-void run_predict(std::string model_dir,
+void run_predict(const std::string &model_dir,
                  const std::vector<float>& input_data,
                  const std::vector<int>& input_shape,
                  std::vector<float>& output_data,
@@ -325,7 +325,7 @@ std::vector<DetectionOut> postprocess_detection(
   return result;
 }
 
-void predict(std::vector<std::string>& images, std::string model_dir) {
+void predict(std::vector<std::string>& images, const std::string& model_dir) {
     // 人脸检测模型
     std::string detect_model_dir = model_dir + "/pyramidbox_lite/";
     // 面部口罩识别分类模型
@@ -368,8 +368,8 @@ void predict(std::vector<std::string>& images, std::string model_dir) {
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
-      printf("Usage: ./main /path/of/model/dir/ /path/of/input/image\n");
-      return -1;
+    printf("Usage: ./main /path/of/model/dir/ /path/of/input/image\n");
+    return -1;
   }
   std::string model_dir = argv[1];
   std::vector<std::string> images = {argv[2]};
