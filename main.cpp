@@ -1,13 +1,22 @@
+/* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. */
 
 #include <string>
 #include <vector>
-#include <thread>
-
+#include <thread> // NOLINT
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include <paddle_inference_api.h>
+#include "paddle_inference_api.h"
 
 bool g_enable_gpu = false;
 // 检测过滤阈值
@@ -15,7 +24,7 @@ float g_threshold = 0.2;
 
 // 用于记录检测结果
 class DetectionOut {
-public:
+ public:
     // 图片序号
     int image_id;
     // 方框列表
@@ -23,7 +32,7 @@ public:
     // 通过opencv截取框到cv::Mat
     std::vector<cv::Mat> mats;
     // 构造函数
-    DetectionOut(int idx) : image_id(idx) {        
+    explicit DetectionOut(int idx) : image_id(idx) {
     }
     // 获取检测库数量
     int get_rect_num() const {
@@ -38,7 +47,7 @@ public:
         return rectange;
     }
     // 添加一个检测框结果
-    void add_rect(std::vector<int>& rect, cv::Mat im) {
+    void add_rect(const std::vector<int>& rect, cv::Mat im) {
         rectange.emplace_back(rect);
         mats.push_back(im);
     }
@@ -53,19 +62,19 @@ bool preprocess_image(const cv::Mat& im_in, float* buffer, const std::vector<int
     cv::Mat im(im_in);
     // resize
     int rc = im.channels();
-	int rw = im.cols;
+    int rw = im.cols;
     int rh = im.rows;
     cv::Size resize_size(input_shape[3], input_shape[2]);
     if (rw != input_shape[3] || rh != input_shape[2]) {
         cv::resize(im, im, resize_size);
     }
     rc = im.channels();
-	rw = im.cols;
+    rw = im.cols;
     rh = im.rows;
     // 减均值除方差: (img - mean) * scale
     float mean[3] = {104, 117, 123};
     float scale[3] = {0.007843, 0.007843, 0.007843};
-    //#pragma omp parallel for
+    // #pragma omp parallel for
     for (int h = 0; h < rh; ++h) {
         auto uptr = im.ptr<uchar>(h);
         int im_index = 0;
@@ -111,7 +120,6 @@ bool preprocess_batch_classify(
         float* buffer = reinterpret_cast<float*>(base + i * item_size);
         threads.emplace_back([im, buffer, input_shape] {
             preprocess_image(im, buffer, input_shape);
-
         });
     }
     for (auto& t : threads) {
@@ -123,30 +131,27 @@ bool preprocess_batch_classify(
 }
 
 // 获取所有图片大小和cv::Mat，输入为图片路径列表
-void get_image_data(
-        std::vector<std::string>& images,
-        std::vector<cv::Mat>& mats,
-        std::vector<std::vector<int>>& input_shapes)
-{
+void get_image_data(std::vector<std::string>& images,
+                    std::vector<cv::Mat>& mats,
+                    std::vector<std::vector<int>>& input_shapes) {
     for (int i = 0; i < images.size(); ++i) {
-        //cv::IMREAD_COLOR
-        auto im = cv::imread(images[i], cv::IMREAD_COLOR);
-        if (im.data == nullptr || im.empty()) {
-            printf("Fail to open image[%d]: [%s]\n", i, images[i].c_str());
-            continue;
-        }
-        cv::cvtColor(im, im, cv::COLOR_RGB2BGR);
-        input_shapes[i] = {1, im.channels(), im.rows, im.cols};
-        mats[i] = im;
+      // cv::IMREAD_COLOR
+      auto im = cv::imread(images[i], cv::IMREAD_COLOR);
+      if (im.data == nullptr || im.empty()) {
+        printf("Fail to open image[%d]: [%s]\n", i, images[i].c_str());
+        continue;
+      }
+      cv::cvtColor(im, im, cv::COLOR_RGB2BGR);
+      input_shapes[i] = {1, im.channels(), im.rows, im.cols};
+      mats[i] = im;
     }
 }
 
 // 用于检测的图片批量预处理
-bool preprocess_batch_detection(
-        std::vector<std::string>& images,
-        std::vector<float>& input_data,
-        std::vector<int>& input_shape,
-        std::vector<cv::Mat>& input_mat) {
+bool preprocess_batch_detection(std::vector<std::string>& images,
+                                std::vector<float>& input_data,
+                                std::vector<int>& input_shape,
+                                std::vector<cv::Mat>& input_mat) {
     // batch 大小
     int batch_size = images.size();
     // 用于临时每张图片预处理后的数据
@@ -204,28 +209,28 @@ bool preprocess_batch_detection(
 }
 
 // 对图片进行预测
- void run_predict(std::string model_dir,
-            const std::vector<float>& input_data,
-            const std::vector<int>& input_shape,
-            std::vector<float>& output_data,
-            int output_id = 0,
-            std::vector<std::vector<size_t>>* lod_data = nullptr) {
+void run_predict(std::string model_dir,
+                 const std::vector<float>& input_data,
+                 const std::vector<int>& input_shape,
+                 std::vector<float>& output_data,
+                 int output_id = 0,
+                 std::vector<std::vector<size_t>>* lod_data = nullptr) {
     // 设置模型配置
     paddle::AnalysisConfig config;
     config.SetModel(model_dir + "/__model__",
                     model_dir + "/__params__");
-	if (g_enable_gpu) {
-	    config.EnableUseGpu(100, 0);
-	} else {
-	    config.DisableGpu();
-	    config.EnableMKLDNN();
-	    config.SetCpuMathLibraryNumThreads(10);
+    if (g_enable_gpu) {
+      config.EnableUseGpu(100, 0);
+    } else {
+      config.DisableGpu();
+      config.EnableMKLDNN();
+      config.SetCpuMathLibraryNumThreads(10);
     }
-	// 使用 ZeroCopyTensor 必须设置 config.SwitchUseFeedFetchOps(false)
-	config.SwitchUseFeedFetchOps(false);
-	config.SwitchSpecifyInputNames(true);
-	// 开启内存优化
-	config.EnableMemoryOptim();
+    // 使用 ZeroCopyTensor 必须设置 config.SwitchUseFeedFetchOps(false)
+    config.SwitchUseFeedFetchOps(false);
+    config.SwitchSpecifyInputNames(true);
+    // 开启内存优化
+    config.EnableMemoryOptim();
     auto predictor = CreatePaddlePredictor(config);
     // 准备输入tensor
     auto input_names = predictor->GetInputNames();
@@ -241,12 +246,12 @@ bool preprocess_batch_detection(
     // 计算输出的 buffer 大小
     int output_size = 1;
     for (int j = 0; j < output_shape.size(); ++j) {
-        output_size *= output_shape[j];
+      output_size *= output_shape[j];
     }
     output_data.resize(output_size);
     out_tensor->copy_to_cpu(output_data.data());
     if (lod_data != nullptr) {
-        *lod_data = out_tensor->lod();
+      *lod_data = out_tensor->lod();
     }
 }
 
@@ -254,74 +259,73 @@ bool preprocess_batch_detection(
 std::vector<std::pair<int, float>> postprocess_classify(
         const std::vector<float>& output_data,
         int batch_size) {
-    // 用于保存每个图的分类结果
-    std::vector<std::pair<int, float>> result;
-    // 获取数据地址
-    auto data = output_data.data();
-    auto out_num = output_data.size();
-    for (int i = 0; i < batch_size; ++i) {
-	    auto out_addr = data + (out_num / batch_size) * i;
-	    int best_class_id = 0;
-        float best_class_score = *(best_class_id + out_addr);
-	    for (int j = 0; j < (out_num / batch_size); ++j) {
-            auto infer_class = j;
-            auto score = *(j + out_addr);
-            // printf("image[%d]: class=%d, score=%.5f\n", i, infer_class, score);
-	        if(score > best_class_score) {
-		        best_class_id = infer_class;
-                best_class_score = score;
-	        }
-	    }
-        // printf("image[%d] : best_class_id=%d, score=%.5f\n", i, best_class_id, best_class_score);
-        result.push_back({best_class_id, best_class_score});
+  // 用于保存每个图的分类结果
+  std::vector<std::pair<int, float>> result;
+  // 获取数据地址
+  auto data = output_data.data();
+  auto out_num = output_data.size();
+  for (int i = 0; i < batch_size; ++i) {
+    auto out_addr = data + (out_num / batch_size) * i;
+    int best_class_id = 0;
+    float best_class_score = *(best_class_id + out_addr);
+    for (int j = 0; j < (out_num / batch_size); ++j) {
+      auto infer_class = j;
+      auto score = *(j + out_addr);
+      // printf("image[%d]: class=%d, score=%.5f\n", i, infer_class, score);
+      if (score > best_class_score) {
+          best_class_id = infer_class;
+          best_class_score = score;
+      }
     }
-    return result;
+    // printf("image[%d] : best_class_id=%d, score=%.5f\n", i, best_class_id, best_class_score);
+    result.push_back({best_class_id, best_class_score});
+  }
+  return result;
 }
 
 // 人脸检测模型的后处理
 std::vector<DetectionOut> postprocess_detection(
-        std::vector<float>& output_data, 
-        std::vector<std::vector<size_t>>& lod_data,
-        std::vector<int>& input_shape,
-        std::vector<cv::Mat>& input_mat) {
-    std::vector<DetectionOut> result;
-    auto rh = input_shape[2];
-    auto rw = input_shape[3];
-    for (int i = 0; i < lod_data[0].size() - 1; ++i) {
-        result.emplace_back(DetectionOut(i));
-        for (int j = lod_data[0][i]; j < lod_data[0][i+1]; ++j) {
-            // 分类
-            int class_id = static_cast<int>(round(output_data[0 + j * 6]));
-            // 分数
-            float score = output_data[1 + j * 6];
-            // 左上坐标
-            int top_left_x = output_data[2 + j * 6] * rw;
-            int top_left_y = output_data[3 + j * 6] * rh;
-            // 右下坐标
-            int right_bottom_x = output_data[4 + j * 6] * rw;
-            int right_bottom_y = output_data[5 + j * 6] * rh;
-            int wd = right_bottom_x - top_left_x;
-            int hd = right_bottom_y - top_left_y;
-            if (score > g_threshold) {
-                std::vector<int> rect = {top_left_x, top_left_y, right_bottom_x, right_bottom_y};
-                cv::Rect clip_rect = cv::Rect(top_left_x, top_left_y, wd, hd) & cv::Rect(0, 0, rw, rh);;
-                cv::Mat roi = input_mat[i](clip_rect);
-                result[i].add_rect(rect, roi);
-                /*
-                printf("image[%d]: rect[%d] = [(%d, %d), (%d, %d)], score = %.5f\n",
-                    i, result[i].get_rect_num() - 1,
-                    top_left_x, top_left_y, right_bottom_x, right_bottom_y,
-                    score
-                );
-                */
-            }
-        }
+    std::vector<float>& output_data,
+    std::vector<std::vector<size_t>>& lod_data,
+    std::vector<int>& input_shape,
+    std::vector<cv::Mat>& input_mat) {
+  std::vector<DetectionOut> result;
+  auto rh = input_shape[2];
+  auto rw = input_shape[3];
+  for (int i = 0; i < lod_data[0].size() - 1; ++i) {
+    result.emplace_back(DetectionOut(i));
+    for (int j = lod_data[0][i]; j < lod_data[0][i+1]; ++j) {
+      // 分类
+      int class_id = static_cast<int>(round(output_data[0 + j * 6]));
+      // 分数
+      float score = output_data[1 + j * 6];
+      // 左上坐标
+      int top_left_x = output_data[2 + j * 6] * rw;
+      int top_left_y = output_data[3 + j * 6] * rh;
+      // 右下坐标
+      int right_bottom_x = output_data[4 + j * 6] * rw;
+      int right_bottom_y = output_data[5 + j * 6] * rh;
+      int wd = right_bottom_x - top_left_x;
+      int hd = right_bottom_y - top_left_y;
+      if (score > g_threshold) {
+        std::vector<int> rect = {top_left_x, top_left_y, right_bottom_x, right_bottom_y};
+        cv::Rect clip_rect = cv::Rect(top_left_x, top_left_y, wd, hd) & cv::Rect(0, 0, rw, rh);
+        cv::Mat roi = input_mat[i](clip_rect);
+        result[i].add_rect(rect, roi);
+        /*
+        printf("image[%d]: rect[%d] = [(%d, %d), (%d, %d)], score = %.5f\n",
+            i, result[i].get_rect_num() - 1,
+            top_left_x, top_left_y, right_bottom_x, right_bottom_y,
+            score
+        );
+        */
+      }
     }
-    return result;
+  }
+  return result;
 }
 
-void predict(std::vector<std::string>& images, std::string model_dir)
-{
+void predict(std::vector<std::string>& images, std::string model_dir) {
     // 人脸检测模型
     std::string detect_model_dir = model_dir + "/pyramidbox_lite/";
     // 面部口罩识别分类模型
@@ -339,7 +343,7 @@ void predict(std::vector<std::string>& images, std::string model_dir)
     run_predict(detect_model_dir, input_data, input_shape, output_data, 0, &lod_data);
     // 检测模型的后处理
     auto det_out = postprocess_detection(output_data, lod_data, input_shape, input_mat);
-    
+
     for (int i = 0; i < det_out.size(); ++i) {
         // 获取检测框 mat 列表
         std::vector<cv::Mat> det_mats = det_out[i].get_mats();
@@ -357,20 +361,19 @@ void predict(std::vector<std::string>& images, std::string model_dir)
             auto rect = det_out[i].get_rects()[j];
             auto cls = out[j];
             printf("image[%d].rect[%d] = (%d, %d, %d, %d), label_class=%d, confidence=%.3f\n",
-                i, j, rect[0], rect[1], rect[2], rect[3], cls.first, cls.second
-            );
+                i, j, rect[0], rect[1], rect[2], rect[3], cls.first, cls.second);
         }
     }
 }
 
-int main(int argc, char** argv)
-{
-    if (argc != 3) {
-        printf("Usage: ./main /path/of/model/dir/ /path/of/input/image\n");
-        return -1;
-    }
-    std::string model_dir = argv[1];
-    std::vector<std::string> images = {argv[2]};
-    predict(images, model_dir);
-    return 0;
+int main(int argc, char* argv[]) {
+  if (argc != 3) {
+      printf("Usage: ./main /path/of/model/dir/ /path/of/input/image\n");
+      return -1;
+  }
+  std::string model_dir = argv[1];
+  std::vector<std::string> images = {argv[2]};
+  predict(images, model_dir);
+
+  return 0;
 }
