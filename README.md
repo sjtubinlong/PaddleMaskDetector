@@ -77,7 +77,7 @@ fluid_inference
 ```shell
 # 0. 切换到工作目录
 cd /root/projects
-# 1. 下载OpenCV3.4.6版本源代码
+# 1. 下载OpenCV 3.4.6版本源代码
 wget -c https://paddleseg.bj.bcebos.com/inference/opencv-3.4.6.zip
 # 2. 解压
 unzip opencv-3.4.6.zip && cd opencv-3.4.6

@@ -36,28 +36,29 @@ class DetectionOut {
     }
     // 获取检测库数量
     int get_rect_num() const {
-        return rectange.size();
+      return rectange.size();
     }
     // 获取cv::Mat列表
     std::vector<cv::Mat> get_mats() {
-        return mats;
+      return mats;
     }
     // 获取检测库列表
     const std::vector<std::vector<int>>& get_rects() const {
-        return rectange;
+      return rectange;
     }
+
     // 添加一个检测框结果
     void add_rect(const std::vector<int>& rect, cv::Mat im) {
-        rectange.emplace_back(rect);
-        mats.push_back(im);
+      rectange.emplace_back(rect);
+      mats.push_back(im);
     }
 };
 
 // 图片预处理: 输入直接为cv::Mat
-bool preprocess_image(const cv::Mat& im_in, float* buffer, const std::vector<int>& input_shape) {
+bool NormalizeImage(const cv::Mat& im_in, float* buffer, const std::vector<int>& input_shape) {
     if (im_in.data == nullptr || im_in.empty()) {
-        printf("Invalid Mat input\n");
-        return false;
+      printf("Invalid Mat input\n");
+      return false;
     }
     cv::Mat im(im_in);
     // resize
@@ -66,7 +67,7 @@ bool preprocess_image(const cv::Mat& im_in, float* buffer, const std::vector<int
     int rh = im.rows;
     cv::Size resize_size(input_shape[3], input_shape[2]);
     if (rw != input_shape[3] || rh != input_shape[2]) {
-        cv::resize(im, im, resize_size);
+      cv::resize(im, im, resize_size);
     }
     rc = im.channels();
     rw = im.cols;
@@ -76,30 +77,31 @@ bool preprocess_image(const cv::Mat& im_in, float* buffer, const std::vector<int
     float scale[3] = {0.007843, 0.007843, 0.007843};
     // #pragma omp parallel for
     for (int h = 0; h < rh; ++h) {
-        auto uptr = im.ptr<uchar>(h);
-        int im_index = 0;
-        for (int w = 0; w < rw; ++w) {
-            for (int c = 0; c < rc; ++c) {
-                int top_index = (c * rh + h) * rw + w;
-                float pixel = static_cast<float>(uptr[im_index++]);
-                pixel = (pixel - mean[c]) * scale[c];
-                buffer[top_index] = pixel;
-            }
+      auto uptr = im.ptr<uchar>(h);
+      int im_index = 0;
+      for (int w = 0; w < rw; ++w) {
+        for (int c = 0; c < rc; ++c) {
+          int top_index = (c * rh + h) * rw + w;
+          float pixel = static_cast<float>(uptr[im_index++]);
+          pixel = (pixel - mean[c]) * scale[c];
+          buffer[top_index] = pixel;
         }
+      }
     }
     return true;
 }
 
 // 图片预处理：输入为图片路径
-bool preprocess_image(std::string filename, float* buffer, const std::vector<int>& input_shape) {
-        cv::Mat im = cv::imread(filename);
-        if (im.data == nullptr || im.empty()) {
-            printf("Fail to open image file : [%s]\n", filename.c_str());
-            return false;
-        }
-        im.convertTo(im, CV_32FC3, 1 / 255.0);
-        cv::cvtColor(im, im, cv::COLOR_BGR2RGB);
-        return preprocess_image(im, buffer, input_shape);
+bool PreprocessImage(const std::string& filename, float* buffer, const std::vector<int>& input_shape) {
+  cv::Mat im = cv::imread(filename);
+  if (im.data == nullptr || im.empty()) {
+    printf("Fail to open image file : [%s]\n", filename.c_str());
+    return false;
+  }
+  im.convertTo(im, CV_32FC3, 1 / 255.0);
+  cv::cvtColor(im, im, cv::COLOR_BGR2RGB);
+
+  return NormalizeImage(im, buffer, input_shape);
 }
 
 // 用于分类的图片批量预处理
@@ -119,7 +121,7 @@ bool preprocess_batch_classify(
         float* base = input_data.data();
         float* buffer = reinterpret_cast<float*>(base + i * item_size);
         threads.emplace_back([im, buffer, input_shape] {
-            preprocess_image(im, buffer, input_shape);
+            NormalizeImage(im, buffer, input_shape);
         });
     }
     for (auto& t : threads) {
@@ -127,6 +129,7 @@ bool preprocess_batch_classify(
             t.join();
         }
     }
+
     return true;
 }
 
@@ -172,7 +175,7 @@ bool preprocess_batch_detection(std::vector<std::string>& images,
         auto buffer = data[i].data();
         auto shape = shapes[i];
         threads.emplace_back([im, buffer, shape] {
-            preprocess_image(im, buffer, shape);
+            NormalizeImage(im, buffer, shape);
         });
     }
     for (auto& t : threads) {
@@ -209,7 +212,7 @@ bool preprocess_batch_detection(std::vector<std::string>& images,
 }
 
 // 对图片进行预测
-void run_predict(const std::string &model_dir,
+void RunPredict(const std::string &model_dir,
                  const std::vector<float>& input_data,
                  const std::vector<int>& input_shape,
                  std::vector<float>& output_data,
@@ -325,7 +328,7 @@ std::vector<DetectionOut> postprocess_detection(
   return result;
 }
 
-void predict(std::vector<std::string>& images, const std::string& model_dir) {
+void Predict(std::vector<std::string>& images, const std::string& model_dir) {
     // 人脸检测模型
     std::string detect_model_dir = model_dir + "/pyramidbox_lite/";
     // 面部口罩识别分类模型
@@ -340,7 +343,7 @@ void predict(std::vector<std::string>& images, const std::string& model_dir) {
     // 检测数据的预处理
     preprocess_batch_detection(images, input_data, input_shape, input_mat);
     // 检测模型预测
-    run_predict(detect_model_dir, input_data, input_shape, output_data, 0, &lod_data);
+    RunPredict(detect_model_dir, input_data, input_shape, output_data, 0, &lod_data);
     // 检测模型的后处理
     auto det_out = postprocess_detection(output_data, lod_data, input_shape, input_mat);
 
@@ -354,7 +357,7 @@ void predict(std::vector<std::string>& images, const std::string& model_dir) {
         // 分类预处理
         preprocess_batch_classify(det_mats, cls_input_data, cls_input_shape);
         // 分类预测
-        run_predict(classify_model_dir, cls_input_data, cls_input_shape, cls_output_data, 1);
+        RunPredict(classify_model_dir, cls_input_data, cls_input_shape, cls_output_data, 1);
         // 分类后处理
         auto out = postprocess_classify(cls_output_data, cls_batch_size);
         for (int j = 0; j < cls_batch_size; ++j) {
@@ -373,7 +376,7 @@ int main(int argc, char* argv[]) {
   }
   std::string model_dir = argv[1];
   std::vector<std::string> images = {argv[2]};
-  predict(images, model_dir);
+  Predict(images, model_dir);
 
   return 0;
 }
