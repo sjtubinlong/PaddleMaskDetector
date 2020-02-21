@@ -33,6 +33,7 @@ if (NOT DEFINED OPENCV_DIR OR ${OPENCV_DIR} STREQUAL "")
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}/")
+include_directories("${CMAKE_SOURCE_DIR}/include")
 include_directories("${PADDLE_DIR}/")
 include_directories("${PADDLE_DIR}/third_party/install/protobuf/include")
 include_directories("${PADDLE_DIR}/third_party/install/glog/include")
@@ -217,8 +218,8 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/libzlib${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
 
-add_executable(main main.cpp)
-target_link_libraries(main ${DEPS})
+add_executable(mask_detector mask_detector.cc)
+target_link_libraries(mask_detector ${DEPS})
 
 if (WIN32)
     add_custom_command(TARGET main POST_BUILD

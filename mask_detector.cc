@@ -12,43 +12,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mask_detector.h" // NOLINT
+#include <iostream>
+#include <string>
+
+#include "mask_detector.hpp" // NOLINT
 
 int main(int argc, char* argv[]) {
-  bool use_gpu = false;
-  image_path = "./images/1.jepg"
-  det_model_dir = "./models/pyramidbox_lite"
-  cls_model_dir = "./models/mask_detector"
+  if (argc < 3 || argc > 4) {
+    std::cout << "Usage:"
+              << "./mask_detector ./models/ ./images/test.png"
+              << std::endl;
+    return -1;
+  }
 
-  // Model initialization
+  bool use_gpu = (argc == 4 ? std::stoi(argv[3]) : false);
+  auto det_model_dir = std::string(argv[1]) + "/pyramidbox_lite";
+  auto cls_model_dir = std::string(argv[1]) + "/mask_detector";
+  auto image_path = argv[2];
+
+  // Init Detection Model
+  float det_shrink = 0.5;
+  float det_threshold = 0.7;
+  std::vector<float> det_means = {104, 177, 123};
+  std::vector<float> det_scale = {0.007843, 0.007843, 0.007843};
   FaceDetector detector(
       det_model_dir,
-      mean = {104, 177, 123},
-      scale = {0.007843, 0.007843, 0.007843},
+      det_means,
+      det_scale,
       use_gpu,
-      threshold = 0.7);
+      det_threshold);
 
+  // Init Classification Model  
+  float cls_threshold = 0.5;
+  std::vector<float> cls_means = {0.5, 0.5, 0.5};
+  std::vector<float> cls_scale = {1.0, 1.0, 1.0};
   MaskClassifier classifier(
       cls_model_dir,
-      mean = {0.5, 0.5, 0.5},
-      scale = {1.0, 1.0, 1.0},
+      cls_means,
+      cls_scale,
       use_gpu,
-      threshold = 0.5);
+      cls_threshold);
 
   // Load image
-  cv::Mat img = imread(img_path, cv::IMREAD_COLOR);
-
+  cv::Mat img = imread(image_path, cv::IMREAD_COLOR);
+  // Prediction result
   std::vector<FaceResult> results;
   // Stage1: Face detection
-  // TODO(longbin): we can add clock here
-  detector.Predict(img, &results, shrink = 0.7);
+  detector.Predict(img, &results, det_shrink);
   // Stage2: Mask wearing classification
-  // TODO(longbin): we can add clock here
   classifier.Predict(&results);
-
-  // Visualization results
+  // Visualization result
   cv::Mat vis_img;
-  Visualization(img, results, &vis_img)
-
+  VisualizeResult(img, results, &vis_img);
   cv::imwrite("result.jpg", vis_img);
+
+  return 0;
 }
