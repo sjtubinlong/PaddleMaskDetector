@@ -177,33 +177,33 @@ inline void FaceDetector::Postprocess(
   int rw = input_shape_[3];
   int total_size = output_data_.size() / 6;
   for (int j = 0; j < total_size; ++j) {
-      // class id
-      int class_id = static_cast<int>(round(output_data_[0 + j * 6]));
-      // confidence score
-      float score = output_data_[1 + j * 6];
-      int xmin = (output_data_[2 + j * 6] * rw) / shrink;
-      int ymin = (output_data_[3 + j * 6] * rh) / shrink;
-      int xmax = (output_data_[4 + j * 6] * rw) / shrink;
-      int ymax = (output_data_[5 + j * 6] * rh) / shrink;
-      int wd = xmax - xmin;
-      int hd = ymax - ymin;
-      if (score > threshold_) {
-        auto roi = cv::Rect(xmin, ymin, wd, hd) &
-                   cv::Rect(0, 0, rw / shrink, rh / shrink);
-        // a view ref to original mat
-        cv::Mat roi_ref(raw_mat, roi);
-        FaceResult result_item;
-        result_item.rect = {xmin, xmax, ymin, ymax};
-        result_item.roi_rect = roi_ref;
-        result->push_back(result_item);
-        std::string name = "roi_" + std::to_string(rect_num) + ".jpeg";
-        cv::imwrite(name, roi_ref);
-        printf("rect[%d] = {left=%d, right=%d, top=%d, bottom=%d}"
-               ", score = %.5f\n",
-               rect_num++,
-               xmin, xmax, ymin, ymax,
-               score);
-      }
+    // class id
+    int class_id = static_cast<int>(round(output_data_[0 + j * 6]));
+    // confidence score
+    float score = output_data_[1 + j * 6];
+    int xmin = (output_data_[2 + j * 6] * rw) / shrink;
+    int ymin = (output_data_[3 + j * 6] * rh) / shrink;
+    int xmax = (output_data_[4 + j * 6] * rw) / shrink;
+    int ymax = (output_data_[5 + j * 6] * rh) / shrink;
+    int wd = xmax - xmin;
+    int hd = ymax - ymin;
+    if (score > threshold_) {
+      auto roi = cv::Rect(xmin, ymin, wd, hd) &
+                  cv::Rect(0, 0, rw / shrink, rh / shrink);
+      // a view ref to original mat
+      cv::Mat roi_ref(raw_mat, roi);
+      FaceResult result_item;
+      result_item.rect = {xmin, xmax, ymin, ymax};
+      result_item.roi_rect = roi_ref;
+      result->push_back(result_item);
+      std::string name = "roi_" + std::to_string(rect_num) + ".jpeg";
+      cv::imwrite(name, roi_ref);
+      printf("rect[%d] = {left=%d, right=%d, top=%d, bottom=%d}"
+              ", score = %.5f\n",
+              rect_num++,
+              xmin, xmax, ymin, ymax,
+              score);
+    }
   }
 }
 
