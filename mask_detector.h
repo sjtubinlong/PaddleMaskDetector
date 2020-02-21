@@ -71,8 +71,8 @@ class MaskClassifier {
                       const std::vector<float>& scale,
                       bool use_gpu = false,
                       threshold = 0.5) :
-  mean_(mean),
-  scale_(scale) {
+    mean_(mean),
+    scale_(scale) {
   }
 
   void Predict(std::vector<FaceResult>* faces);
