@@ -16,7 +16,7 @@ macro(safe_set_static_flag)
         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
       if(${flag_var} MATCHES "/MD")
         string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-	  endif(${flag_var} MATCHES "/MD")
+      endif(${flag_var} MATCHES "/MD")
     endforeach(flag_var)
 endmacro()
 
@@ -150,7 +150,7 @@ if (WIN32)
         set(DEPS
             ${PADDLE_DIR}/paddle/fluid/inference/libpaddle_fluid${CMAKE_STATIC_LIBRARY_SUFFIX})
     else()
-	    set(DEPS
+        set(DEPS
             ${PADDLE_DIR}/paddle/lib/libpaddle_fluid${CMAKE_STATIC_LIBRARY_SUFFIX})
     endif()
 endif()
@@ -164,6 +164,7 @@ else()
 endif()
 
 if (NOT WIN32)
+    set(EXTERNAL_LIB "-lrt -ldl -lpthread")
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
         glog gflags protobuf z xxhash
@@ -177,7 +178,7 @@ if (NOT WIN32)
 else()
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
-        opencv_world346 glog gflags_static libprotobuf zlibstatic xxhash)
+        opencv_world346 glog gflags_static libprotobuf zlibstatic xxhash ${EXTERNAL_LIB})
     set(DEPS ${DEPS} libcmt shlwapi)
     if (EXISTS "${PADDLE_DIR}/third_party/install/snappy/lib")
         set(DEPS ${DEPS} snappy)
@@ -216,9 +217,6 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/liblibwebp${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/libzlib${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
-
-set(EXTERNAL_LIB "-lrt -ldl -lpthread")
-set(DEPS ${DEPS} ${EXTERNAL_LIB})
 
 add_executable(mask_detector main.cc src/mask_detector.cc)
 target_link_libraries(mask_detector ${DEPS})
