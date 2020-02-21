@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   auto image_path = argv[2];
 
   // Init Detection Model
-  float det_shrink = 0.5;
+  float det_shrink = 0.6;
   float det_threshold = 0.7;
   std::vector<float> det_means = {104, 177, 123};
   std::vector<float> det_scale = {0.007843, 0.007843, 0.007843};
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
       use_gpu,
       det_threshold);
 
-  // Init Classification Model  
+  // Init Classification Model
   float cls_threshold = 0.5;
   std::vector<float> cls_means = {0.5, 0.5, 0.5};
   std::vector<float> cls_scale = {1.0, 1.0, 1.0};
