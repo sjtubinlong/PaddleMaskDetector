@@ -218,7 +218,7 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/libzlib${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
 
-add_executable(mask_detector mask_detector.cc)
+add_executable(mask_detector main.cc src/mask_detector.cc)
 target_link_libraries(mask_detector ${DEPS})
 
 if (WIN32)

@@ -61,6 +61,18 @@ int main(int argc, char* argv[]) {
   detector.Predict(img, &results, det_shrink);
   // Stage2: Mask wearing classification
   classifier.Predict(&results);
+  /*
+  for (const FaceResult& item : results) {
+    printf("{left=%d, right=%d, top=%d, bottom=%d},"
+           " class_id=%d, confidence=%.5f\n",
+           item.rect[0],
+           item.rect[1],
+           item.rect[2],
+           item.rect[3],
+           item.class_id,
+           item.score);
+  }
+  */
   // Visualization result
   cv::Mat vis_img;
   VisualizeResult(img, results, &vis_img);
