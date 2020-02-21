@@ -164,7 +164,6 @@ else()
 endif()
 
 if (NOT WIN32)
-    set(EXTERNAL_LIB "-lrt -ldl -lpthread")
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
         glog gflags protobuf z xxhash
@@ -178,7 +177,7 @@ if (NOT WIN32)
 else()
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
-        opencv_world346 glog gflags_static libprotobuf zlibstatic xxhash ${EXTERNAL_LIB})
+        opencv_world346 glog gflags_static libprotobuf zlibstatic xxhash)
     set(DEPS ${DEPS} libcmt shlwapi)
     if (EXISTS "${PADDLE_DIR}/third_party/install/snappy/lib")
         set(DEPS ${DEPS} snappy)
@@ -217,6 +216,9 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/liblibwebp${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/libzlib${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
+
+set(EXTERNAL_LIB "-lrt -ldl -lpthread")
+set(DEPS ${DEPS} ${EXTERNAL_LIB})
 
 add_executable(mask_detector main.cc src/mask_detector.cc)
 target_link_libraries(mask_detector ${DEPS})
