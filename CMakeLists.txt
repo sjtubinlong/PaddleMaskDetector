@@ -163,7 +163,6 @@ else()
 endif()
 
 if (NOT WIN32)
-    set(EXTERNAL_LIB "-lrt -ldl -lpthread")
     set(DEPS ${DEPS}
         ${MATH_LIB} ${MKLDNN_LIB}
         glog gflags protobuf z xxhash
@@ -216,6 +215,8 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/liblibwebp${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(DEPS ${DEPS} ${OPENCV_DIR}/share/OpenCV/3rdparty/lib64/libzlib${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
+set(EXTERNAL_LIB "-lrt -ldl -lpthread")
+set(DEPS ${DEPS} ${EXTERNAL_LIB})
 
 add_executable(main main.cpp)
 target_link_libraries(main ${DEPS})
