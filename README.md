@@ -12,14 +12,13 @@
 
 如**已安装**好，直接跳过本步骤。
 
-- 安装 `PaddlePaddle` 和 `PaddleHub`
-`PaddlePaddle`的安装, 请点击[官方安装文档](https://paddlepaddle.org.cn/install/quick)选择合适你安装方式
-- `PaddleHub`的安装
-```shell
-pip install paddlehub
-```
+#### 1.1 安装 `PaddlePaddle` 和 `PaddleHub`
+  - `PaddlePaddle`的安装:
+    请点击[官方安装文档](https://paddlepaddle.org.cn/install/quick) 选择适合的方式
+  - `PaddleHub`的安装: `pip install paddlehub`
 
 #### 1.2 从`PaddleHub`导出预测模型
+
 运行以下`Python`代码通过模型导出到指定路径：
 
 ```python
@@ -43,6 +42,7 @@ inference_model
     └── __param__ # 参数文件
 
 ```
+
 ## 2.C++预测部署编译
 
 本项目支持在`Windows`和`Linux`上编译并部署`C++`项目，不同平台的编译请参考：
