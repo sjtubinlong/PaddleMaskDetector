@@ -133,8 +133,6 @@ void RunPredict(std::string model_dir,
       config.EnableUseGpu(100, 0);
   } else {
       config.DisableGpu();
-      config.EnableMKLDNN();
-      config.SetCpuMathLibraryNumThreads(10);
   }
   // 使用 ZeroCopyTensor 必须设置 config.SwitchUseFeedFetchOps(false)
   config.SwitchUseFeedFetchOps(false);
