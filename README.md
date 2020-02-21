@@ -10,15 +10,14 @@
 
 ## 1.PaddleHub导出预测模型
 
-#### 1.1 安装 `PaddlePaddle` 和 `PaddleHub`
+如**已安装**好，直接跳过本步骤。
 
-1. `PaddlePaddle`的安装, 请点击[官方安装文档](https://paddlepaddle.org.cn/install/quick)选择合适你安装方式
-2. `PaddleHub`的安装
+- 安装 `PaddlePaddle` 和 `PaddleHub`
+`PaddlePaddle`的安装, 请点击[官方安装文档](https://paddlepaddle.org.cn/install/quick)选择合适你安装方式
+- `PaddleHub`的安装
 ```shell
 pip install paddlehub
 ```
-
-如果**已安装**好，直接跳过本步骤。
 
 #### 1.2 从`PaddleHub`导出预测模型
 运行以下`Python`代码通过模型导出到指定路径：
@@ -35,7 +34,7 @@ module.processor.save_inference_model("./inference_model")
 ```
 inference_model
 |
-├── mask_detector # 口罩人脸分类模型
+├── mask_detector # 口罩人脸分类模型
 |   ├── __model__ # 模型文件
 │   └── __param__ # 参数文件
 |
