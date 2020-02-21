@@ -20,7 +20,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "paddle_inference_api.h" // NO LINT
+#include "paddle_inference_api.h" // NOLINT
 
 bool g_enable_gpu = false;
 // 检测过滤阈值
