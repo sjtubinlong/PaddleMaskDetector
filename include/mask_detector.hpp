@@ -37,7 +37,7 @@ struct FaceResult {
   int class_id;
 };
 
-// Load Pddle Inference Model
+// Load Paddle Inference Model
 void LoadModel(
     const std::string& model_dir,
     bool use_gpu,
