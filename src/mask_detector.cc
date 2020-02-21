@@ -62,6 +62,59 @@ void LoadModel(
 void VisualizeResult(const cv::Mat& img,
                      const std::vector<FaceResult>& results,
                      cv::Mat* vis_img) {
+  for (int i = 0; i < results.size(); ++i) {
+      FaceResult result = results[i];
+    int w = result.rect[1] - result.rect[0];
+    int h = result.rect[3] - result.rect[2];
+    cv::Rect roi = cv::Rect(result.rect[0], result.rect[2], w, h);
+
+    // Configure color and text size
+    cv::Scalar roi_color;
+    std::string text;
+    if (result.class_id == 1) {
+      text = "MASK:  ";
+      roi_color = cv::Scalar(0, 255, 0);
+    } else {
+      text = "NO MASK:  ";
+      roi_color = cv::Scalar(0, 0, 255);
+    }
+    text += std::to_string(static_cast<int>(result.score*100)) + "%";
+    int font_face = cv::FONT_HERSHEY_TRIPLEX;
+    double font_scale = 1.f;
+    float thickness = 1;
+    cv::Size text_size = cv::getTextSize(text,
+                                         font_face,
+                                         font_scale,
+                                         thickness,
+                                         nullptr);
+    float new_font_scale = roi.width * font_scale / text_size.width;
+    text_size = cv::getTextSize(text,
+                               font_face,
+                               new_font_scale,
+                               thickness,
+                               nullptr);
+    cv::Point origin;
+    origin.x = roi.x;
+    origin.y = roi.y;
+
+    // Configure text background
+    cv::Rect text_back = cv::Rect(result.rect[0],
+    result.rect[2] - text_size.height,
+    text_size.width,
+    text_size.height);
+
+    // Draw roi object, text, and background
+    *vis_img = img;
+    cv::rectangle(*vis_img, roi, roi_color, 2);
+    cv::rectangle(*vis_img, text_back, cv::Scalar(225, 225, 225), -1);
+    cv::putText(*vis_img,
+                text,
+                origin,
+                font_face,
+                new_font_scale,
+                cv::Scalar(0, 0, 0),
+                thickness);
+  }
 }
 
 

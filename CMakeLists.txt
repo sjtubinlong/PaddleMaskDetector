@@ -16,7 +16,7 @@ macro(safe_set_static_flag)
         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
       if(${flag_var} MATCHES "/MD")
         string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-	  endif(${flag_var} MATCHES "/MD")
+      endif(${flag_var} MATCHES "/MD")
     endforeach(flag_var)
 endmacro()
 
@@ -150,7 +150,7 @@ if (WIN32)
         set(DEPS
             ${PADDLE_DIR}/paddle/fluid/inference/libpaddle_fluid${CMAKE_STATIC_LIBRARY_SUFFIX})
     else()
-	    set(DEPS
+        set(DEPS
             ${PADDLE_DIR}/paddle/lib/libpaddle_fluid${CMAKE_STATIC_LIBRARY_SUFFIX})
     endif()
 endif()
