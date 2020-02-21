@@ -222,7 +222,7 @@ add_executable(mask_detector main.cc src/mask_detector.cc)
 target_link_libraries(mask_detector ${DEPS})
 
 if (WIN32)
-    add_custom_command(TARGET main POST_BUILD
+    add_custom_command(TARGET mask_detector POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_DIR}/third_party/install/mklml/lib/mklml.dll ./mklml.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_DIR}/third_party/install/mklml/lib/libiomp5md.dll ./libiomp5md.dll
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PADDLE_DIR}/third_party/install/mkldnn/lib/mkldnn.dll ./mkldnn.dll
