@@ -81,4 +81,5 @@ main.exe ./pyramidbox_lite_server_mask/ ./images/mask_input.png
 运行后，预测结果保存在文件`result.jpg`中。
 
 预测结果示例：
+
 ![output_image](https://paddlehub.bj.bcebos.com/deploy/result.jpg)
