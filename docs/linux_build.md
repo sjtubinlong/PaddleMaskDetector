@@ -99,3 +99,7 @@ sh linux_build.sh
 ```
 
 执行程序时会打印检测框的位置与口罩是否佩戴的结果，另外result.jpg文件为检测的可视化结果。
+
+检测图片及结果示例:
+
+![input_image](https://paddlehub.bj.bcebos.com/deploy/mask_input.png)![output_image](https://paddlehub.bj.bcebos.com/deploy/result.jpg)
