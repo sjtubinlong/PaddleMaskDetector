@@ -15,7 +15,7 @@
 #include <iostream>
 #include <string>
 
-#include "mask_detector.hpp" // NOLINT
+#include "mask_detector.h" // NOLINT
 
 int main(int argc, char* argv[]) {
   if (argc < 3 || argc > 4) {
