@@ -8,9 +8,7 @@
 - [1. PaddleHub导出预测模型](#1PaddleHub导出预测模型)
 - [2. C++预测部署编译](#2C预测部署编译)
 
-## 1.PaddleHub导出预测模型
-
-如**已安装**好，直接跳过本步骤。
+## 1. PaddleHub导出预测模型
 
 #### 1.1 安装 `PaddlePaddle` 和 `PaddleHub`
   - `PaddlePaddle`的安装:
@@ -19,32 +17,26 @@
 
 #### 1.2 从`PaddleHub`导出预测模型
 
-运行以下`Python`代码通过模型导出到指定路径：
+在有网络访问条件下，执行`python export_model.py`导出两个可用于推理部署的口罩模型
+其中`pyramidbox_lite_mobile_mask`为移动版模型, 模型更小，计算量低；
+`pyramidbox_lite_server_mask`为服务器版模型，在此推荐该版本模型，精度相对移动版本更高。
 
-```python
-import paddlehub as hub
-# 加载口罩人脸检测及分类模型
-module = hub.Module(name="pyramidbox_lite_mobile_mask")
-# 导出预测模型到指定路径
-module.processor.save_inference_model("./inference_model")
+成功执行代码后导出的模型路径结构：
 ```
-
-导出后的模型路径结构：
-```
-inference_model
+pyramidbox_lite_server_mask
 |
-├── mask_detector # 口罩人脸分类模型
-|   ├── __model__ # 模型文件
-│   └── __param__ # 参数文件
+├── mask_detector   # 口罩人脸分类模型
+|   ├── __model__   # 模型文件
+│   └── __params__  # 参数文件
 |
 └── pyramidbox_lite # 口罩人脸检测模型
-    ├── __model__ # 模型文件
-    └── __param__ # 参数文件
+    ├── __model__   # 模型文件
+    └── __params__  # 参数文件
 
 ```
 
-## 2.C++预测部署编译
+## 2. C++预测部署编译
 
-本项目支持在`Windows`和`Linux`上编译并部署`C++`项目，不同平台的编译请参考：
+本项目支持在Windows和Linux上编译并部署C++项目，不同平台的编译请参考：
 - [Linux 编译](./docs/linux_build.md)
 - [Windows 使用 Visual Studio 2019编译](./docs/windows_build.md)
