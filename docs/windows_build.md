@@ -27,9 +27,9 @@
 
 |  版本   | 链接  |
 |  ----  | ----  |
-| CPU+MKL版  | [fluid_inference.tgz](https://paddle-wheel.bj.bcebos.com/1.6.3/win-infer/mkl/cpu/fluid_inference_install_dir.zip) |
-| CUDA9.0+MKL 版  | [fluid_inference.tgz](https://paddle-wheel.bj.bcebos.com/1.6.3/win-infer/mkl/post97/fluid_inference_install_dir.zip) |
-| CUDA10.0+MKL 版 | [fluid_inference.tgz](https://paddle-wheel.bj.bcebos.com/1.6.3/win-infer/mkl/post107/fluid_inference_install_dir.zip) |
+| CPU+MKL版  | [fluid_inference_install_dir.zip](https://paddle-wheel.bj.bcebos.com/1.6.3/win-infer/mkl/cpu/fluid_inference_install_dir.zip) |
+| CUDA9.0+MKL 版  | [fluid_inference_install_dir.zip](https://paddle-wheel.bj.bcebos.com/1.6.3/win-infer/mkl/post97/fluid_inference_install_dir.zip) |
+| CUDA10.0+MKL 版 | [fluid_inference_install_dir.zip](https://paddle-wheel.bj.bcebos.com/1.6.3/win-infer/mkl/post107/fluid_inference_install_dir.zip) |
 
 更多不同平台的可用预测库版本，请[点击查看](https://paddlepaddle.org.cn/documentation/docs/zh/advanced_usage/deploy/inference/windows_cpp_inference.html) 选择适合你的版本。
 
@@ -76,17 +76,9 @@ fluid_inference_install_dir
 ```shell
 main.exe ./pyramidbox_lite_server_mask/ ./images/mask_input.png
 ```
-第一个参数即`PaddleHub`导出的预测模型，第二个参数即要预测的图片， 运行示例如下：
+第一个参数即`PaddleHub`导出的预测模型，第二个参数即要预测的图片。
 
-**预测结果**包含**两**种不同格式：
+运行后，预测结果保存在文件`result.jpg`中。
 
-- **第1种**直接以文本明文形式保存在**图片所在路径**下，假设图片名字为`mask_input.png`, 预测结果文件名为`mask_input.png.txt`， 其格式如下：
-
-```
-# 左边位置 右边位置 上面位置 下面位置 预测label 置信度
-left right top bottom label_id confidence
-```
-
-实际使用时，可根据业务需求自行进行渲染。
-
-- **第2种**是对原图画出检测框和标签渲染后的图片结果，假设原图名字为`mask_input.png`, 预测结果文件名为`mask_input_png_result.jpeg`， 示例如下：
+预测结果示例：
+![output_image](https://paddlehub.bj.bcebos.com/deploy/result.jpg)
