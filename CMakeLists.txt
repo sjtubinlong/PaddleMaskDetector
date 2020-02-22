@@ -33,7 +33,6 @@ if (NOT DEFINED OPENCV_DIR OR ${OPENCV_DIR} STREQUAL "")
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}/")
-include_directories("${CMAKE_SOURCE_DIR}/include")
 include_directories("${PADDLE_DIR}/")
 include_directories("${PADDLE_DIR}/third_party/install/protobuf/include")
 include_directories("${PADDLE_DIR}/third_party/install/glog/include")
@@ -222,7 +221,7 @@ if (NOT WIN32)
     set(DEPS ${DEPS} ${EXTERNAL_LIB})
 endif()
 
-add_executable(mask_detector main.cc src/mask_detector.cc)
+add_executable(mask_detector main.cc mask_detector.cc)
 target_link_libraries(mask_detector ${DEPS})
 
 if (WIN32)

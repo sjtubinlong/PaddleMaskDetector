@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-# include "mask_detector.hpp"
+# include "mask_detector.h"
 
 // Normalize the image by (pix - mean) * scale
 void NormalizeImage(
