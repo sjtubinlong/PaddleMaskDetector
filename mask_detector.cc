@@ -63,22 +63,21 @@ void VisualizeResult(const cv::Mat& img,
                      const std::vector<FaceResult>& results,
                      cv::Mat* vis_img) {
   for (int i = 0; i < results.size(); ++i) {
-      FaceResult result = results[i];
-    int w = result.rect[1] - result.rect[0];
-    int h = result.rect[3] - result.rect[2];
-    cv::Rect roi = cv::Rect(result.rect[0], result.rect[2], w, h);
+    int w = results[i].rect[1] - results[i].rect[0];
+    int h = results[i].rect[3] - results[i].rect[2];
+    cv::Rect roi = cv::Rect(results[i].rect[0], results[i].rect[2], w, h);
 
     // Configure color and text size
     cv::Scalar roi_color;
     std::string text;
-    if (result.class_id == 1) {
+    if (results[i].class_id == 1) {
       text = "MASK:  ";
       roi_color = cv::Scalar(0, 255, 0);
     } else {
       text = "NO MASK:  ";
       roi_color = cv::Scalar(0, 0, 255);
     }
-    text += std::to_string(static_cast<int>(result.score*100)) + "%";
+    text += std::to_string(static_cast<int>(results[i].score*100)) + "%";
     int font_face = cv::FONT_HERSHEY_TRIPLEX;
     double font_scale = 1.f;
     float thickness = 1;
@@ -98,8 +97,8 @@ void VisualizeResult(const cv::Mat& img,
     origin.y = roi.y;
 
     // Configure text background
-    cv::Rect text_back = cv::Rect(result.rect[0],
-    result.rect[2] - text_size.height,
+    cv::Rect text_back = cv::Rect(results[i].rect[0],
+    results[i].rect[2] - text_size.height,
     text_size.width,
     text_size.height);
 
