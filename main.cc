@@ -43,15 +43,13 @@ int main(int argc, char* argv[]) {
       det_threshold);
 
   // Init Classification Model
-  float cls_threshold = 0.5;
   std::vector<float> cls_means = {0.5, 0.5, 0.5};
   std::vector<float> cls_scale = {1.0, 1.0, 1.0};
   MaskClassifier classifier(
       cls_model_dir,
       cls_means,
       cls_scale,
-      use_gpu,
-      cls_threshold);
+      use_gpu);
 
   // Load image
   cv::Mat img = imread(image_path, cv::IMREAD_COLOR);
@@ -61,7 +59,7 @@ int main(int argc, char* argv[]) {
   detector.Predict(img, &results, det_shrink);
   // Stage2: Mask wearing classification
   classifier.Predict(&results);
-  /*
+
   for (const FaceResult& item : results) {
     printf("{left=%d, right=%d, top=%d, bottom=%d},"
            " class_id=%d, confidence=%.5f\n",
@@ -72,7 +70,7 @@ int main(int argc, char* argv[]) {
            item.class_id,
            item.score);
   }
-  */
+
   // Visualization result
   cv::Mat vis_img;
   VisualizeResult(img, results, &vis_img);

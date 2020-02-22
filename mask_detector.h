@@ -90,11 +90,9 @@ class MaskClassifier {
   explicit MaskClassifier(const std::string& model_dir,
                       const std::vector<float>& mean,
                       const std::vector<float>& scale,
-                      bool use_gpu = false,
-                      float threshold = 0.5) :
+                      bool use_gpu = false) :
   mean_(mean),
-  scale_(scale),
-  threshold_(threshold) {
+  scale_(scale) {
     LoadModel(model_dir, use_gpu, &predictor_);
   }
 
@@ -112,6 +110,5 @@ class MaskClassifier {
   const std::vector<int> EVAL_CROP_SIZE_ = {3, 128, 128};
   std::vector<float> mean_;
   std::vector<float> scale_;
-  float threshold_;
 };
 

@@ -36,7 +36,7 @@
 
 下载并解压, 解压后的 `fluid_inference`目录包含的内容：
 ```
-fluid_inference
+fluid_inference_install_dir
 ├── paddle # paddle核心库和头文件
 |
 ├── third_party # 第三方依赖库和头文件
@@ -44,7 +44,7 @@ fluid_inference
 └── version.txt # 版本和编译信息
 ```
 
-**注意：** 这里的`fluid_inference` 目录所在路径，将用于后面的编译参数设置，请放置在合适的位置。
+**注意：** 这里的`fluid_inference_install_dir` 目录所在路径，将用于后面的编译参数设置，请放置在合适的位置。
 
 ## 2. Visual Studio 2019 编译
 
@@ -64,19 +64,19 @@ fluid_inference
 ![step2.5](https://paddleseg.bj.bcebos.com/inference/vs2019_step5.png)
 
 - 2.6 点击`生成`->`全部生成` 编译项目
-![step6](https://paddleseg.bj.bcebos.com/inference/vs2019_step6.png)
+![step2.6](https://paddleseg.bj.bcebos.com/inference/vs2019_step6.png)
 
 ## 3. 运行程序
 
 成功编译后， 产出的可执行文件在项目子目录`out\build\x64-Release`目录， 按以下步骤运行代码：
 
 - 打开`cmd`切换至该目录
-- 运行以下命令：
+- 运行以下命令传入口罩识别模型路径与测试图片
+
 ```shell
-main.exe /root/projects/inference_model/ /root/projects/images/mask_input.png
+main.exe ./pyramidbox_lite_server_mask/ ./images/mask_input.png
 ```
 第一个参数即`PaddleHub`导出的预测模型，第二个参数即要预测的图片， 运行示例如下：
-
 
 **预测结果**包含**两**种不同格式：
 
