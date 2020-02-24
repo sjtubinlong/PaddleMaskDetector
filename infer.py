@@ -17,6 +17,7 @@ import os
 import sys
 import ast
 import time
+import json
 
 import numpy as np
 import cv2
@@ -38,10 +39,9 @@ def VisualizeResult(im, faces):
     LABELS = ['NO_MASK', 'MASK']
     COLORS = [(0, 0, 255), (0, 255, 0)]
     for face in faces:
-        
         label = LABELS[face.class_id]
         color = COLORS[face.class_id]
-        left, right, top, bottom = [int(item) for item in face.rect_info]
+        left, right, top, bottom = [int(item) for item in face.rect_info]           
         label_position = (left, top)
         cv2.putText(im, label, label_position, cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA) 
         cv2.rectangle(im, (left, top), (right, bottom), color, 3)
@@ -57,6 +57,7 @@ def LoadModel(model_dir, use_gpu = False):
         config.switch_ir_optim(True)
     else:
         config.disable_gpu()
+    config.disable_glog_info()
     config.switch_specify_input_names(True)
     config.enable_memory_optim()
     return fluid.core.create_paddle_predictor(config)
@@ -106,6 +107,7 @@ class MaskClassifier:
         output_data = output_data.as_ndarray()
         self.Postprocess(output_data, faces)
 
+
 class FaceDetector:
     def __init__(self, model_dir, mean, scale, use_gpu = False, threshold = 0.7):
         self.mean = np.array(mean).reshape((3, 1, 1))
@@ -139,12 +141,13 @@ class FaceDetector:
             ymax = (out[5] * h)
             wd = xmax - xmin
             hd = ymax - ymin
-            if score > self.threshold:
+            valid = (xmax >= xmin and xmin > 0 and ymax >= ymin and ymin > 0)
+            if score > self.threshold and valid:
                 roi_rect = ori_im[int(ymin) : int(ymax), int(xmin): int(xmax)]
                 det_out.append(FaceResult(roi_rect, [xmin, xmax, ymin, ymax]))
         return det_out
 
-    def Predict(self, image, faces, shrink):
+    def Predict(self, image, shrink):
         ori_im = image.copy()
         im = self.Preprocess(image, shrink)
         im_tensor = fluid.core.PaddleTensor(im.copy().astype('float32'))
@@ -152,13 +155,7 @@ class FaceDetector:
         output_data = output_data.as_ndarray()
         return self.Postprocess(output_data, ori_im, shrink)
 
-if __name__ == "__main__":
-    models_dir = '/root/projects/PaddleMask/models/'
-    image_paths = [
-        './mask_input.png',
-        './test_mask_detection.jpg'
-    ]
-
+def predict_images(model_dir, image_paths):
     detector = FaceDetector(
         model_dir = models_dir + '/pyramidbox_lite/',
         mean = [104.0, 177.0, 123.0],
@@ -175,10 +172,55 @@ if __name__ == "__main__":
     )
     images = [
         cv2.imread(path, cv2.IMREAD_COLOR) for path in image_paths]
-    faces = []
     for idx in range(len(images)):
         im = images[idx]
-        det_out = detector.Predict(im, faces, shrink = 0.7)
+        det_out = detector.Predict(im, shrink = 0.7)
         classifier.Predict(det_out)
         img = VisualizeResult(im, det_out)
         cv2.imwrite("result_%d.jpg" % idx, img)
+
+
+def predict_video(model_dir, video_path, im_shape=(1920, 1080), use_camera=False):
+    if use_camera:
+        capture = cv2.VideoCapture(0)
+    else:
+        capture = cv2.VideoCapture(video_path)
+
+    detector = FaceDetector(
+        model_dir = models_dir + '/pyramidbox_lite/',
+        mean = [104.0, 177.0, 123.0],
+        scale = [0.007843, 0.007843, 0.007843],
+        use_gpu = True,
+        threshold = 0.4
+    )
+
+    classifier = MaskClassifier(
+        model_dir = models_dir + '/mask_detector/',
+        mean = [0.5, 0.5, 0.5],
+        scale = [1.0, 1.0, 1.0],
+        use_gpu = True
+    )
+    fps = 30
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = cv2.VideoWriter("./result.mp4", fourcc, fps, im_shape)
+    while True:
+        ret, frame = capture.read()
+        if ret == False:
+            break
+        det_out = detector.Predict(frame, shrink = 0.7)
+        classifier.Predict(det_out)
+        im = VisualizeResult(frame, det_out)
+        writer.write(im)
+    writer.release()
+      
+
+if __name__ == "__main__":
+    models_dir = '/root/projects/PaddleMask/models/'
+    models_dir = '/home/chenlingchi/project/clc_mask/inference_model/'
+    image_paths = [
+        './crowd.jpg'
+    ]
+    predict_images(models_dir, image_paths)
+
+    video_path = "/home/chenlingchi/project/crowd.mp4"
+    predict_video(models_dir, video_path, im_shape=(1920,1080), use_camera=False)
